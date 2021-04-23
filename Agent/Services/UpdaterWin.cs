@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Win32;
-using Remotely.Agent.Interfaces;
-using Remotely.Agent.Utilities;
+﻿using Remotely.Agent.Interfaces;
 using Remotely.Shared.Utilities;
 using System;
 using System.Diagnostics;
@@ -29,11 +26,6 @@ namespace Remotely.Agent.Services
         public async Task BeginChecking()
         {
             if (EnvironmentHelper.IsDebug)
-            {
-                return;
-            }
-
-            if (!RegistryHelper.CheckNetFrameworkVersion())
             {
                 return;
             }
