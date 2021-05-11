@@ -42,6 +42,7 @@ namespace Remotely.Desktop.Core.Services
         public bool DisconnectRequested { get; set; }
         public EncoderParameters EncoderParams { get; private set; }
         public bool HasControl { get; set; } = true;
+        public bool AutoQuality { get; set; } = true;
         public bool IsConnected => CasterSocket.IsConnected;
 
         public bool IsStalled
@@ -78,6 +79,7 @@ namespace Remotely.Desktop.Core.Services
         public string ViewerConnectionID { get; set; }
         private IAudioCapturer AudioCapturer { get; }
 
+
         private ICasterSocket CasterSocket { get; }
 
         private IClipboardService ClipboardService { get; }
@@ -87,11 +89,7 @@ namespace Remotely.Desktop.Core.Services
         public void Dispose()
         {
             DisconnectRequested = true;
-            Disposer.TryDisposeAll(new IDisposable[]
-            {
-                RtcSession,
-                Capturer
-            });
+            Disposer.TryDisposeAll(RtcSession, Capturer);
             GC.SuppressFinalize(this);
         }
 
@@ -236,6 +234,7 @@ namespace Remotely.Desktop.Core.Services
             {
                 var dto = new CaptureFrameDto()
                 {
+                    Id = screenFrame.Id,
                     Left = left,
                     Top = top,
                     Width = width,
@@ -250,6 +249,7 @@ namespace Remotely.Desktop.Core.Services
 
             var endOfFrameDto = new CaptureFrameDto()
             {
+                Id = screenFrame.Id,
                 Left = left,
                 Top = top,
                 Width = width,

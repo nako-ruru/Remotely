@@ -91,6 +91,9 @@ namespace Remotely.Desktop.Core.Services
                     case BaseDtoType.CtrlAltDel:
                         await viewer.SendCtrlAltDel();
                         break;
+                    case BaseDtoType.ToggleAutoQuality:
+                        ToggleAutoQuality(message, viewer);
+                        break;
                     case BaseDtoType.ToggleAudio:
                         ToggleAudio(message);
                         break;
@@ -175,12 +178,24 @@ namespace Remotely.Desktop.Core.Services
         private void KeyDown(byte[] message)
         {
             var dto = MessagePackSerializer.Deserialize<KeyDownDto>(message);
+            if (dto?.Key is null)
+            {
+                Logger.Write("Key input is empty.", EventType.Warning);
+                return;
+            }
             KeyboardMouseInput.SendKeyDown(dto.Key);
         }
 
         private async Task KeyPress(byte[] message)
         {
             var dto = MessagePackSerializer.Deserialize<KeyPressDto>(message);
+
+            if (dto?.Key is null)
+            {
+                Logger.Write("Key input is empty.", EventType.Warning);
+                return;
+            }
+
             KeyboardMouseInput.SendKeyDown(dto.Key);
             await Task.Delay(1);
             KeyboardMouseInput.SendKeyUp(dto.Key);
@@ -189,6 +204,11 @@ namespace Remotely.Desktop.Core.Services
         private void KeyUp(byte[] message)
         {
             var dto = MessagePackSerializer.Deserialize<KeyUpDto>(message);
+            if (dto?.Key is null)
+            {
+                Logger.Write("Key input is empty.", EventType.Warning);
+                return;
+            }
             KeyboardMouseInput.SendKeyUp(dto.Key);
         }
 
@@ -243,6 +263,11 @@ namespace Remotely.Desktop.Core.Services
         {
             var dto = MessagePackSerializer.Deserialize<ToggleAudioDto>(message);
             AudioCapturer.ToggleAudio(dto.ToggleOn);
+        }
+        private void ToggleAutoQuality(byte[] message, Viewer viewer)
+        {
+            var dto = MessagePackSerializer.Deserialize<ToggleAutoQualityDto>(message);
+            viewer.AutoQuality = dto.ToggleOn;
         }
 
         private void ToggleBlockInput(byte[] message)

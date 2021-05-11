@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace Remotely.Server.Services
 {
-    // TODO: Separate this into domains-specific services.
+    // TODO: Separate this into domain-specific services.
     public interface IDataService
     {
         Task AddAlert(string deviceID, string organizationID, string alertMessage, string details = null);
@@ -79,7 +79,7 @@ namespace Remotely.Server.Services
         bool DoesUserHaveAccessToDevice(string deviceID, RemotelyUser remotelyUser);
 
         bool DoesUserHaveAccessToDevice(string deviceID, string remotelyUserID);
-
+        Task<DeviceGroup> GetDeviceGroup(string deviceGroupID);
         string[] FilterDeviceIDsByUserPermission(string[] deviceIDs, RemotelyUser remotelyUser);
         Task AddScriptResultToScriptRun(string scriptResultId, int scriptRunId);
         string[] FilterUsersByDevicePermission(IEnumerable<string> userIDs, string deviceID);
@@ -1223,6 +1223,12 @@ namespace Remotely.Server.Services
                     ));
         }
 
+        public async Task<DeviceGroup> GetDeviceGroup(string deviceGroupID)
+        {
+            using var dbContext = _dbFactory.CreateDbContext();
+            return await dbContext.DeviceGroups.FindAsync(deviceGroupID);
+        }
+
         public DeviceGroup[] GetDeviceGroups(string username)
         {
             using var dbContext = _dbFactory.CreateDbContext();
@@ -1417,8 +1423,7 @@ namespace Remotely.Server.Services
             var pendingRuns = new List<ScriptRun>();
 
             var now = Time.Now;
-            var device = await dbContext.Devices.FindAsync(deviceId);
-
+    
             var scriptRunGroups = dbContext.ScriptRuns
                 .Include(x => x.Devices)
                 .Include(x => x.DevicesCompleted)
@@ -1426,7 +1431,6 @@ namespace Remotely.Server.Services
                     scriptRun.RunOnNextConnect &&
                     dbContext.SavedScripts.Any(savedScript => savedScript.Id == scriptRun.SavedScriptId) &&
                     scriptRun.Devices.Any(device => device.ID == deviceId) &&
-                    !scriptRun.DevicesCompleted.Any(deviceCompleted => deviceCompleted.ID == deviceId) &&
                     scriptRun.RunAt < now)
                 .AsEnumerable()
                 .GroupBy(x => x.SavedScriptId);
@@ -1437,7 +1441,10 @@ namespace Remotely.Server.Services
                     .OrderByDescending(x => x.RunAt)
                     .FirstOrDefault();
 
-                pendingRuns.Add(latestRun);
+                if (!latestRun.DevicesCompleted.Any(x => x.ID == deviceId))
+                {
+                    pendingRuns.Add(latestRun);
+                }
             }
 
             await dbContext.SaveChangesAsync();
@@ -2083,6 +2090,11 @@ namespace Remotely.Server.Services
                  .Include(x => x.DeviceGroup)
                  .ThenInclude(x => x.Users)
                  .FirstOrDefault(x => x.ID == deviceID);
+
+            if (device is null)
+            {
+                return Array.Empty<string>();
+            }
 
             var orgUsers = dbContext.Users
                 .Where(user =>
